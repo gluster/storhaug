@@ -4,7 +4,6 @@ Version:   1.0
 Release:   1%{?prereltag:.%{prereltag}}%{?dist}
 License:   GPLv2
 URL:       https://github.com/gluster/storhaug
-Vendor:    Fedora Project
 BuildArch: noarch
 Obsoletes: storhaug-smb < 1.0
 Source0:   https://github.com/gluster/%{name}/archive/v%{version}/%{name}-%{version}.tar.gz
@@ -32,6 +31,7 @@ High-Availability NFS add-on for NFS-Ganesha
 %install
 install -d -m 0755 %{buildroot}%{_sbindir}
 mkdir -p %{buildroot}%{_sysconfdir}/ctdb/nfs-checks-ganesha.d
+mkdir -p %{buildroot}%{_sysconfdir}/sysconfig/storhaug.d
 install -m 0744 storhaug %{buildroot}%{_sbindir}/storhaug
 install -m 0744 20.nfs-ganesha.check %{buildroot}%{_sysconfdir}/ctdb/nfs-checks-ganesha.d/
 install -m 0744 nfs-ganesha-callout %{buildroot}%{_sysconfdir}/ctdb
@@ -42,6 +42,7 @@ install -m 0744 nfs-ganesha-callout %{buildroot}%{_sysconfdir}/ctdb
 %{!?_licensedir:%global license %%doc}
 %license LICENSE
 %{_sbindir}/storhaug
+%dir %{_sysconfdir}/sysconfig/storhaug.d
 
 %files nfs
 %dir %{_sysconfdir}/ctdb/nfs-checks-ganesha.d
@@ -49,5 +50,8 @@ install -m 0744 nfs-ganesha-callout %{buildroot}%{_sysconfdir}/ctdb
      %{_sysconfdir}/ctdb/nfs-ganesha-callout
 
 %changelog
+* Wed Jul 11 2018 Kaleb S. KEITHLEY <kkeithle at redhat.com>
+- /etc/sysconfig/storhaug.d, Vendor
+
 * Fri Jun 8 2018 Kaleb S. KEITHLEY <kkeithle at redhat.com> 1.0-1
 - Reboot, Initial version
