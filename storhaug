@@ -93,9 +93,7 @@ determine_servers()
     local cmd=${1}
     declare -a servers
     declare -a addrs
-    local tmp_ifs=${IFS}
 
-    IFS='\n'
     local num_servers=0
     if [ -s /etc/ctdb/nodes ]; then
         eval servers=( $(< /etc/ctdb/nodes) )
@@ -120,12 +118,11 @@ determine_servers()
         done
 
         if [[ "${num_servers}" != "${num_addrs}" ]]; then
-            storlog "ERR" "num_servers != num_addrs"
+            storlog "ERR" "num_servers != num_addrs in /etc/ctdb/servers and /etc/ctdb/public_addresses"
             return 1
         fi
 
     fi
-    IFS=${tmp_ifs}
 }
 
 ### Setup functions
