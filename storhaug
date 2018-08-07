@@ -118,7 +118,7 @@ determine_servers()
         done
 
         if [[ "${num_servers}" != "${num_addrs}" ]]; then
-            storlog "ERR" "num_servers != num_addrs in /etc/ctdb/servers and /etc/ctdb/public_addresses"
+            storlog "ERR" "num_servers != num_addrs in /etc/ctdb/nodes and /etc/ctdb/public_addresses"
             return 1
         fi
 
