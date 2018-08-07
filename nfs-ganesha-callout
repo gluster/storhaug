@@ -47,7 +47,7 @@ glusterfs)
 		echo "CTDB_NFS_STATE_MNT not defined for GlusterFS"
 		exit 1
 	fi
-	eval hostaddrs=( $(hostname -I) )
+	eval hostaddrs=( $(hostname -I || hostname -i) )
 	hostaddr="${hostaddrs[0]}"
 	NODESTATEDIR="${state_dir}/nfs-ganesha/${hostaddr}"
 	GANSTATEDIR="${state_dir}/nfs-ganesha/.noderefs"
