@@ -253,7 +253,7 @@ service_check ()
 nfs_releaseip ()
 {
 	logger "nfs_releaseip $*"
-	/usr/bin/storhaug --releaseip ${2}
+	/usr/sbin/storhaug --releaseip ${2}
 }
 
 nfs_takeip ()
@@ -264,7 +264,7 @@ nfs_takeip ()
 		check_ln "$NODESTATEDIR" "${GANSTATEDIR}/${2}"
 		;;
 	esac
-	/usr/bin/storhaug --takeip ${2} 
+	/usr/sbin/storhaug --takeip ${2} 
 }
 
 ##################################################
