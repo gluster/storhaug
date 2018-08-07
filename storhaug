@@ -1,4 +1,4 @@
-#!/bin/bash
+MY_IPS="$(hostname -I || hostname -i)".#!/bin/bash
 
 # STORHAUG: High-Availability Storage Server
 #
@@ -16,7 +16,7 @@ declare -a HA_SERVERS
 
 SECRET_PEM="/etc/sysconfig/storhaug.d/secret.pem"
 
-MY_IPS=( $(hostname -I) )
+MY_IPS=( $(hostname -I || hostname -i) )
 
 ### Utility functions
 
