@@ -1,0 +1,62 @@
+.\" Copyright (C) 2018 Red Hat, Inc
+.\"
+.\" This is free documentation; you can redistribute it and/or
+.\" modify it under the terms of the GNU General Public License as
+.\" published by the Free Software Foundation; either version 2 of
+.\" the License, or (at your option) any later version.
+.\"
+.\" The GNU General Public License's references to "object code"
+.\" and "executables" are to be interpreted as the output of any
+.\" document formatting or typesetting system, including
+.\" intermediate and printed output.
+.\"
+.\" This manual is distributed in the hope that it will be useful,
+.\" but WITHOUT ANY WARRANTY; without even the implied warranty of
+.\" MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+.\" GNU General Public License for more details.
+.\"
+.\" You should have received a copy of the GNU General Public License along
+.\" with this program; if not, write to the Free Software Foundation, Inc.,
+.\" 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+.\"
+.TH STORHAUG 8 "August 2018" "storhaug" "System Administration"
+.SH NAME
+storhaug \- Manage Highly Available NFS-Ganesha NFS Server using CTDB
+.SH SYNOPSIS
+.B storhaug
+.RB [ setup | teardown | reload ]
+.LP
+.B storhaug
+.RB [ add | delete ]
+.I IP VIP
+.LP
+.B storhaug
+.RB [ export | unexport ]
+.I vol
+.SH DESCRIPTION
+The
+.B storhaug
+utility is used to manage an active-active highly available cluster of
+NFS-Ganesha NFS servers using CTDB and GlusterFS.
+.SH "SEE ALSO"
+.na
+.BR ganesha-config (2),
+.BR ganesha-cache-config (2),
+.BR ganesha-core-config (2),
+.BR ganesha-export-config (2),
+.BR ganesha-gluster-config (2),
+.BR ganesha-log-config (2),
+.BR ctdb (1),
+.BR ctdbd (1),
+.BR ctdbd.conf (5),
+.BR gluster (8)
+.ad
+.SH BUGS
+Probably
+.SH AUTHORS
+.nf
+Kaleb S. KEITHLEY <kkeithle@redhat.com>
+.fi
+.SH AVAILABILITY
+The storhaug command is part of the storhaug package and is available from
+https://github.com/gluster/storhaug

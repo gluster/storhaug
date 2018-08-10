@@ -22,7 +22,14 @@ MY_IPS=( $(hostname -I || hostname -i) )
 
 usage()
 {
-    echo usage
+    echo "Usage       : setup|teardown|add|delete|reload|export|unexport"
+    echo "Setup       : storhaug setup"
+    echo "Teardown    : storhaug teardown"
+    echo "Add node    : storhaug add <IP> <VIP>"
+    echo "Delete node : storhaug delete <IP> <VIP>"
+    echo "Reload      : storhaug reload"
+    echo "Export      : storhaug export <VOL>"
+    echo "Unexport    : storhaug unexport <VOL>"
 }
 
 storlog()
@@ -158,8 +165,8 @@ setup_copy_ctdb_config()
             scp_do /etc/ctdb/ctdbd.conf "${srv}:/etc/ctdb/"
             scp_do /etc/ctdb/nodes "${srv}:/etc/ctdb/"
             scp_do /etc/ctdb/public_addresses "${srv}:/etc/ctdb/"
-	    ssh_do ${srv} firewall-cmd --add-service=ctdb --permanent
-	    ssh_do ${srv} firewall-cmd --reload
+            ssh_do ${srv} firewall-cmd --add-service=ctdb --permanent
+            ssh_do ${srv} firewall-cmd --reload
         fi
     done
 }
@@ -313,15 +320,15 @@ case "${cmd}" in
 
         determine_servers "teardown"
         take_ip ${1}
-	;;
+        ;;
     releaseip | --releaseip)
         storlog "INFO" "releaseip"
 
         determine_servers "teardown"
         release_ip ${1}
-	;;
+        ;;
     reload | --reload)
-	storlog "INFO" "Not implemented: ${cmd}"
+        storlog "INFO" "Not implemented: ${cmd}"
         ;;
     export | --export)
         storlog "INFO" "export ${1}"
@@ -330,10 +337,10 @@ case "${cmd}" in
         export_vol ${1}      
         ;;
     unexport | --unexport)
-	storlog "INFO" "Not implemented: ${cmd}"
+        storlog "INFO" "Not implemented: ${cmd}"
         ;;
     add | --add | delete | --delete | remove | --remove)
-	storlog "ERR" "Not implemented: ${cmd}"
+        storlog "ERR" "Not implemented: ${cmd}"
         ;;
     *)
         storlog "ERR" "Unknown argument: ${cmd}"
