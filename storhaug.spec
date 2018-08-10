@@ -10,6 +10,7 @@ Source0:   https://github.com/gluster/%{name}/archive/v%{version}/%{name}-%{vers
 
 Requires:  glusterfs-server
 Requires:  ctdb
+Requires:  firewalld
 
 %description
 High-Availability add-on for storage servers
