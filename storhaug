@@ -1,4 +1,4 @@
-MY_IPS="$(hostname -I || hostname -i)".#!/bin/bash
+#!/bin/bash
 
 # STORHAUG: High-Availability Storage Server
 #
