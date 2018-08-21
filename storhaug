@@ -171,6 +171,15 @@ setup_copy_ctdb_config()
     done
 }
 
+setup_copy_secret_pem()
+{
+    for srv in ${HA_SERVERS[*]}; do
+        if [[ ${srv} != ${MY_IPS[0]} ]]; then
+            scp_do ${SECRET_PEM} "${srv}:${SECRET_PEM}"
+        fi
+    done
+}
+
 setup_start_ctdb()
 {
     for srv in ${HA_SERVERS[*]}; do
@@ -302,6 +311,7 @@ case "${cmd}" in
             if [ ${HA_NUM_SERVERS} -gt 1 ]; then
                 setup_move_ganesha_config
                 setup_copy_ctdb_config
+                setup_copy_secret_pem
                 setup_start_ctdb
             else
                 storlog "ERR" "Insufficient servers for HA, aborting"
