@@ -149,11 +149,11 @@ setup_move_ganesha_config()
     if [[ ! -z ${exports[0]} ]]; then
         cp /etc/ganesha/exports/* ${mnt}/nfs-ganesha/exports/
     fi
-    mv /etc/ganesha/ganesha.conf /etc/ganesha/ganesha.conf.orig
     umount ${mnt}
     rmdir ${mnt}
 
     for srv in ${HA_SERVERS[*]}; do
+        ssh_do ${srv} "mv /etc/ganesha/ganesha.conf /etc/ganesha/ganesha.conf.orig"
         ssh_do ${srv} "ln -s /run/gluster/shared_storage/nfs-ganesha/ganesha.conf /etc/ganesha/ganesha.conf"
     done
 }
