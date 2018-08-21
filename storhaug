@@ -281,6 +281,16 @@ EOF
     done
 }
 
+unexport_vol()
+{
+    eval unexport_id=( $(awk '/Export_Id/' /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf | cut -d= -f2 | tr -d ' ;') )
+    for srv in ${HA_SERVERS[*]}; do
+        ssh_do ${srv} "dbus-send --print-reply --system --dest=org.ganesha.nfsd /org/ganesha/nfsd/ExportMgr org.ganesha.nfsd.exportmgr.RemoveExport ${unexport_id}"
+    done
+	sed -i '/export.${1}.conf/d' /run/gluster/shared_storage/nfs-ganesha/ganesha.conf
+	rm /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf
+}
+
 ### Mainline
 
 cmd=${1}; shift
@@ -337,7 +347,10 @@ case "${cmd}" in
         export_vol ${1}      
         ;;
     unexport | --unexport)
-        storlog "INFO" "Not implemented: ${cmd}"
+        storlog "INFO" "unexport ${1}"
+
+        determine_servers "unexport"
+        unexport_vol ${1}
         ;;
     add | --add | delete | --delete | remove | --remove)
         storlog "ERR" "Not implemented: ${cmd}"
