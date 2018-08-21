@@ -248,7 +248,10 @@ export_vol()
         return
     fi
 
-    # FIXME: check that vol isn't already exported
+    if [ -f "/run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf" ]; then
+        echo "${1} already exported"
+        return
+    fi
 
     cat << EOF > /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf
 EXPORT {
