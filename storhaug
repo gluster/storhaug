@@ -287,8 +287,8 @@ unexport_vol()
     for srv in ${HA_SERVERS[*]}; do
         ssh_do ${srv} "dbus-send --print-reply --system --dest=org.ganesha.nfsd /org/ganesha/nfsd/ExportMgr org.ganesha.nfsd.exportmgr.RemoveExport uint16:${unexport_id}"
     done
-	sed -i '/export.${1}.conf/d' /run/gluster/shared_storage/nfs-ganesha/ganesha.conf
-	rm /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf
+    sed -i '/export.${1}.conf/d' /run/gluster/shared_storage/nfs-ganesha/ganesha.conf
+    rm /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf
 }
 
 ### Mainline
