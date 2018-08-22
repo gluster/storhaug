@@ -347,6 +347,11 @@ case "${cmd}" in
         export_vol ${1}      
         ;;
     unexport | --unexport)
+        if [[ ${1} == "" ]]; then
+            storlog "WARN" "missing volume name"
+            usage
+            exit 0
+        fi
         storlog "INFO" "unexport ${1}"
 
         determine_servers "unexport"
