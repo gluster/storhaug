@@ -330,6 +330,11 @@ case "${cmd}" in
         storlog "INFO" "Not implemented: ${cmd}"
         ;;
     export | --export)
+        if [[ ${1} == "" ]]; then
+            storlog "WARN" "missing volume name"
+            usage
+            exit 0
+        fi
         storlog "INFO" "export ${1}"
 
         determine_servers "teardown"
