@@ -343,7 +343,7 @@ case "${cmd}" in
         storlog "ERR" "Not implemented: ${cmd}"
         ;;
     *)
-        storlog "ERR" "Unknown argument: ${cmd}"
+        usage
         ;;
 esac
 
