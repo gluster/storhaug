@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # This CTDB NFS callout script for Ganesha is based on the example
 # nfs-ganesha-callout shipped with CTDB.
