@@ -236,9 +236,30 @@ release_ip()
 
 ### export_vol
 
+get_export_id()
+{
+    local ids=()
+
+    for file in /run/gluster/shared_storage/nfs-ganesha/exports/export.*.conf; do
+        eval ids+=( $(awk '/Export_Id/' $file | cut -d= -f2 | tr -d ' ;') )
+    done
+
+    while true; do
+        found=false
+        ((exp_id++))
+
+        for id in ${ids[*]}; do
+            if [[ ${exp_id} == ${id} ]]; then 
+                found=true
+            fi
+        done
+        if [ $found == false ]; then return 0; fi
+    done
+}
+
 export_vol()
 {
-    local exp_id="0"
+    exp_id=0
     local vol_started=""
 
     vol_started=$(gluster volume status ${1} 2>&1)
@@ -251,10 +272,12 @@ export_vol()
         echo "${1} already exported"
         return
     fi
+    
+    get_export_id
 
     cat << EOF > /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf
 EXPORT {
-  Export_Id = __EXPORT_ID__;
+  Export_Id =${exp_id};
   Path = "/${1}";
   Pseudo = "/${1}";
   Access_Type = RW;
@@ -270,10 +293,6 @@ EXPORT {
   }
 }
 EOF
-
-    exp_id=$(ls -1 /run/gluster/shared_storage/nfs-ganesha/exports/export.*.conf | wc -l)
-
-    sed -i -e s/__EXPORT_ID__/${exp_id}/ /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf
 
     echo "%include \"/run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf\"" >> \
         /run/gluster/shared_storage/nfs-ganesha/ganesha.conf
