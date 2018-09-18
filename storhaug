@@ -240,23 +240,28 @@ export_vol()
 {
     local exp_id="0"
     local vol_started=""
+    local volume=${1}
 
-    vol_started=$(gluster volume status ${1} 2>&1)
-    if [ "${vol_started}" = "Volume ${1} is not started" ]; then
-        echo "${1} is not started"
+    vol_started=$(gluster volume status ${volume} 2>&1)
+    if [ "${vol_started}" = "Volume ${volume} is not started" ]; then
+        echo "${volume} is not started"
         return
     fi
 
-    if [ -f "/run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf" ]; then
-        echo "${1} already exported"
+    if [ ! -d "/run/gluster/shared_storage/nfs-ganesha/exports/${volume}/" ]; then
+	mkdir /run/gluster/shared_storage/nfs-ganesha/exports/${volume}/
+    fi
+
+    if [ -f "/run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export..conf" ]; then
+        echo "${volume} already exported"
         return
     fi
 
-    cat << EOF > /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf
+    cat << EOF > /run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export..conf
 EXPORT {
   Export_Id = __EXPORT_ID__;
-  Path = "/${1}";
-  Pseudo = "/${1}";
+  Path = "/${volume}";
+  Pseudo = "/${volume}";
   Access_Type = RW;
   Squash = No_root_squash;
   Disable_ACL = true;
@@ -266,31 +271,32 @@ EXPORT {
   FSAL {
     Name = "GLUSTER";
     Hostname = localhost;
-    Volume = "${1}";
+    Volume = "${volume}";
   }
 }
 EOF
 
-    exp_id=$(ls -1 /run/gluster/shared_storage/nfs-ganesha/exports/export.*.conf | wc -l)
+    exp_id=$(ls -1 /run/gluster/shared_storage/nfs-ganesha/exports/*/export.*.conf | wc -l)
 
-    sed -i -e s/__EXPORT_ID__/${exp_id}/ /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf
+    sed -i -e s/__EXPORT_ID__/${exp_id}/ /run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export..conf
 
-    echo "%include \"/run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf\"" >> \
+    echo "%include \"/run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export..conf\"" >> \
         /run/gluster/shared_storage/nfs-ganesha/ganesha.conf
 
     for srv in ${HA_SERVERS[*]}; do
-        ssh_do ${srv} "dbus-send --print-reply --system --dest=org.ganesha.nfsd /org/ganesha/nfsd/ExportMgr org.ganesha.nfsd.exportmgr.AddExport string:/run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf string:EXPORT\(Path=/${1}\)"
+        ssh_do ${srv} "dbus-send --print-reply --system --dest=org.ganesha.nfsd /org/ganesha/nfsd/ExportMgr org.ganesha.nfsd.exportmgr.AddExport string:/run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export..conf string:EXPORT\(Path=/${volume}\)"
     done
 }
 
 unexport_vol()
 {
-    eval unexport_id=( $(awk '/Export_Id/' /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf | cut -d= -f2 | tr -d ' ;') )
+    local volume=${1}
+    eval unexport_id=( $(awk '/Export_Id/' /run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export..conf | cut -d= -f2 | tr -d ' ;') )
     for srv in ${HA_SERVERS[*]}; do
         ssh_do ${srv} "dbus-send --print-reply --system --dest=org.ganesha.nfsd /org/ganesha/nfsd/ExportMgr org.ganesha.nfsd.exportmgr.RemoveExport uint16:${unexport_id}"
     done
-    sed -i '/export.${1}.conf/d' /run/gluster/shared_storage/nfs-ganesha/ganesha.conf
-    rm /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf
+    sed -i "/${volume}[\/]export..conf/d" /run/gluster/shared_storage/nfs-ganesha/ganesha.conf
+    rm /run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export..conf
 }
 
 ### Mainline
