@@ -28,8 +28,8 @@ usage()
     echo "Add node    : storhaug add <IP> <VIP>"
     echo "Delete node : storhaug delete <IP> <VIP>"
     echo "Reload      : storhaug reload"
-    echo "Export      : storhaug export <VOL>"
-    echo "Unexport    : storhaug unexport <VOL>"
+    echo "Export      : storhaug export <VOL> [subdir path]"
+    echo "Unexport    : storhaug unexport <VOL> [subdir path]"
 }
 
 storlog()
@@ -241,6 +241,8 @@ export_vol()
     local exp_id="0"
     local vol_started=""
     local volume=${1}
+    local subdir=${2#/}
+    local filename=${subdir//[\/]/_}
 
     vol_started=$(gluster volume status ${volume} 2>&1)
     if [ "${vol_started}" = "Volume ${volume} is not started" ]; then
@@ -252,16 +254,16 @@ export_vol()
 	mkdir /run/gluster/shared_storage/nfs-ganesha/exports/${volume}/
     fi
 
-    if [ -f "/run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export..conf" ]; then
-        echo "${volume} already exported"
+    if [ -f "/run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export.${filename}.conf" ]; then
+        echo "${volume} for path /${subdir} already exported"
         return
     fi
 
-    cat << EOF > /run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export..conf
+    cat << EOF > /run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export.${filename}.conf
 EXPORT {
   Export_Id = __EXPORT_ID__;
-  Path = "/${volume}";
-  Pseudo = "/${volume}";
+  Path = "/${volume}/${subdir}";
+  Pseudo = "/${volume}/${subdir}";
   Access_Type = RW;
   Squash = No_root_squash;
   Disable_ACL = true;
@@ -272,31 +274,35 @@ EXPORT {
     Name = "GLUSTER";
     Hostname = localhost;
     Volume = "${volume}";
-  }
+    volpath = "/${subdir}";
+ }
 }
 EOF
 
     exp_id=$(ls -1 /run/gluster/shared_storage/nfs-ganesha/exports/*/export.*.conf | wc -l)
 
-    sed -i -e s/__EXPORT_ID__/${exp_id}/ /run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export..conf
+    sed -i -e s/__EXPORT_ID__/${exp_id}/ /run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export.${filename}.conf
 
-    echo "%include \"/run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export..conf\"" >> \
+    echo "%include \"/run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export.${filename}.conf\"" >> \
         /run/gluster/shared_storage/nfs-ganesha/ganesha.conf
 
     for srv in ${HA_SERVERS[*]}; do
-        ssh_do ${srv} "dbus-send --print-reply --system --dest=org.ganesha.nfsd /org/ganesha/nfsd/ExportMgr org.ganesha.nfsd.exportmgr.AddExport string:/run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export..conf string:EXPORT\(Path=/${volume}\)"
+        ssh_do ${srv} "dbus-send --print-reply --system --dest=org.ganesha.nfsd /org/ganesha/nfsd/ExportMgr org.ganesha.nfsd.exportmgr.AddExport string:/run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export.${filename}.conf string:EXPORT\(Path=/${volume}/${subdir}\)"
     done
 }
 
 unexport_vol()
 {
     local volume=${1}
-    eval unexport_id=( $(awk '/Export_Id/' /run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export..conf | cut -d= -f2 | tr -d ' ;') )
+    local subdir=${2}
+    local filename=${subdir//[\/]/_}
+
+    eval unexport_id=( $(awk '/Export_Id/' /run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export.${filename}.conf | cut -d= -f2 | tr -d ' ;') )
     for srv in ${HA_SERVERS[*]}; do
         ssh_do ${srv} "dbus-send --print-reply --system --dest=org.ganesha.nfsd /org/ganesha/nfsd/ExportMgr org.ganesha.nfsd.exportmgr.RemoveExport uint16:${unexport_id}"
     done
-    sed -i "/${volume}[\/]export..conf/d" /run/gluster/shared_storage/nfs-ganesha/ganesha.conf
-    rm /run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export..conf
+    sed -i "/${volume}[\/]export.${filename}.conf/d" /run/gluster/shared_storage/nfs-ganesha/ganesha.conf
+    rm /run/gluster/shared_storage/nfs-ganesha/exports/${volume}/export.${filename}.conf
 }
 
 ### Mainline
@@ -354,10 +360,10 @@ case "${cmd}" in
             usage
             exit 0
         fi
-        storlog "INFO" "export ${1}"
+        storlog "INFO" "export volume ${1} for path ${2}"
 
         determine_servers "teardown"
-        export_vol ${1}      
+        export_vol ${1} ${2}
         ;;
     unexport | --unexport)
         if [[ ${1} == "" ]]; then
@@ -365,10 +371,10 @@ case "${cmd}" in
             usage
             exit 0
         fi
-        storlog "INFO" "unexport ${1}"
+        storlog "INFO" "unexport volume ${1} for path ${2}"
 
         determine_servers "unexport"
-        unexport_vol ${1}
+        unexport_vol ${1} ${2}
         ;;
     add | --add | delete | --delete | remove | --remove)
         storlog "ERR" "Not implemented: ${cmd}"
