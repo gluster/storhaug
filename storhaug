@@ -120,7 +120,7 @@ determine_servers()
         local num_addrs=0
         local index=0
         while [ "x${addrs[${index}]}x" != "xx" ]; do
-            index=$(( ${index} + 2 )) 
+            index=$(( ${index} + 2 ))
             num_addrs=$(( ${num_addrs} + 1 ))
         done
 
@@ -197,7 +197,7 @@ teardown_restore_ganesha_config()
     eval exports=( $(ls -1 /run/gluster/shared_storage/nfs-ganesha/exports) )
     if [[ ! -z ${exports[0]} ]]; then
         cp /run/gluster/shared_storage/nfs-ganesha/exports/* /etc/ganesha/exports/
-    fi 
+    fi
 }
 
 ### take_ip, release_ip functions
@@ -351,7 +351,7 @@ case "${cmd}" in
         storlog "INFO" "export ${1}"
 
         determine_servers "teardown"
-        export_vol ${1}      
+        export_vol ${1}
         ;;
     unexport | --unexport)
         if [[ ${1} == "" ]]; then
@@ -371,4 +371,3 @@ case "${cmd}" in
         usage
         ;;
 esac
-
