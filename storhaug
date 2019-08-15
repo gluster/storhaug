@@ -62,10 +62,17 @@ storlog()
 
 ssh_do()
 {
-    if [[ ${1} = "${CTDB_MY_IP}" ]]; then
-        eval ${2}
+    ip=$1
+    shift
+    if [[ ${ip} = "${CTDB_MY_IP}" ]]; then
+        eval "${*}"
     else
-        ssh -q -oPasswordAuthentication=no -oStrictHostKeyChecking=no -i ${SECRET_PEM} root@${1} "${2}"
+        ssh -q                          \
+            -oPasswordAuthentication=no \
+            -oStrictHostKeyChecking=no  \
+            -i ${SECRET_PEM}            \
+            root@"${ip}"                \
+            "${*}"
     fi
 
     local _ret=$?
