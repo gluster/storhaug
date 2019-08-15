@@ -13,7 +13,6 @@
 
 set -euo pipefail
 
-HA_NUM_SERVERS=0
 declare -a HA_SERVERS
 
 SECRET_PEM="/etc/sysconfig/storhaug.d/secret.pem"
@@ -117,7 +116,6 @@ determine_servers()
         readarray -t servers < /etc/ctdb/nodes
     fi
 
-    HA_NUM_SERVERS=${#servers[*]}
     HA_SERVERS=( ${servers[*]} )
 
     if [[ "X${cmd}X" = "XsetupX" ]]; then
@@ -126,7 +124,7 @@ determine_servers()
             readarray -t addrs < /etc/ctdb/public_addresses
         fi
 
-        if [[ "${#servers[*]}" != "${#addrs[*]}" ]]; then
+        if [[ "${#HA_SERVERS[*]}" != "${#addrs[*]}" ]]; then
             storlog "ERR" "size of servers != size of addrs in /etc/ctdb/nodes and /etc/ctdb/public_addresses"
             return 1
         fi
@@ -315,7 +313,7 @@ case "${cmd}" in
             storlog "INFO" "nfs-ganesha is already running"
         else
             determine_servers "setup"
-            if [ ${HA_NUM_SERVERS} -gt 1 ]; then
+            if [ ${#HA_SERVERS[*]} -gt 1 ]; then
                 setup_move_ganesha_config
                 setup_copy_ctdb_config
                 setup_start_ctdb
