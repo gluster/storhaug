@@ -34,7 +34,7 @@ usage()
     echo "Add node     : storhaug add <IP> <VIP>"
     echo "Delete node  : storhaug delete <IP> <VIP>"
     echo "Reload       : storhaug reload"
-    echo "Export       : storhaug export <VOL>"
+    echo "Export       : storhaug export <VOL> [PATH]"
     echo "List exports : storhaug list-exports"
     echo "Unexport     : storhaug unexport <VOL>"
 }
@@ -242,8 +242,10 @@ release_ip()
 export_vol()
 {
     local volume="${1}"
+    local path="${2:-${volume}}"
     local exp_id="0"
     local vol_started=""
+    local vol_conf="/run/gluster/shared_storage/nfs-ganesha/exports/export.${volume}.conf"
 
     set +o errexit
     vol_started=$(gluster volume status "${volume}" 2>&1)
@@ -253,16 +255,16 @@ export_vol()
         return
     fi
 
-    if [ -f "/run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf" ]; then
-        echo "${1} already exported"
+    if [ -f "${vol_conf}" ]; then
+        echo "${volume} already exported"
         return
     fi
 
-    cat << EOF > /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf
+    cat << EOF > "${vol_conf}"
 EXPORT {
   Export_Id = __EXPORT_ID__;
-  Path = "/${1}";
-  Pseudo = "/${1}";
+  Path = "/${path}";
+  Pseudo = "/${path}";
   Access_Type = RW;
   Squash = No_root_squash;
   Disable_ACL = true;
@@ -272,20 +274,20 @@ EXPORT {
   FSAL {
     Name = "GLUSTER";
     Hostname = localhost;
-    Volume = "${1}";
+    Volume = "${volume}";
   }
 }
 EOF
 
-    exp_id=$(ls -1 /run/gluster/shared_storage/nfs-ganesha/exports/export.*.conf | wc -l)
+    exp_id=$(find /run/gluster/shared_storage/nfs-ganesha/exports -name 'export.*.conf' | wc -l)
 
-    sed -i -e s/__EXPORT_ID__/${exp_id}/ /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf
+    sed -i -e "s/__EXPORT_ID__/${exp_id}/" "${vol_conf}"
 
-    echo "%include \"/run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf\"" >> \
+    echo "%include \"${vol_conf}\"" >> \
          /run/gluster/shared_storage/nfs-ganesha/ganesha.conf
 
     for srv in ${HA_SERVERS[*]}; do
-        ssh_do ${srv} "dbus-send --print-reply --system --dest=org.ganesha.nfsd /org/ganesha/nfsd/ExportMgr org.ganesha.nfsd.exportmgr.AddExport string:/run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf string:EXPORT\(Path=/${1}\)"
+        ssh_do "${srv}" "dbus-send --print-reply --system --dest=org.ganesha.nfsd /org/ganesha/nfsd/ExportMgr org.ganesha.nfsd.exportmgr.AddExport string:${vol_conf} string:EXPORT\\(Path=/${path}\\)"
     done
 }
 
@@ -360,10 +362,10 @@ case "${cmd}" in
             usage
             exit 0
         fi
-        storlog "INFO" "export ${1}"
+        storlog "INFO" "export ${*}"
 
         determine_servers "teardown"
-        export_vol "${1}"
+        eval export_vol "${*}"
         ;;
     unexport | --unexport)
         if [[ ${1} == "" ]]; then
