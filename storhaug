@@ -113,15 +113,11 @@ determine_servers()
     declare -a servers
     declare -a addrs
 
-    local num_servers=0
     if [ -s /etc/ctdb/nodes ]; then
         readarray -t servers < /etc/ctdb/nodes
     fi
-    while [ "x${servers[${num_servers}]}x" != "xx" ]; do
-        num_servers=$(( ${num_servers} + 1 ))
-    done
 
-    HA_NUM_SERVERS=${num_servers}
+    HA_NUM_SERVERS=${#servers[*]}
     HA_SERVERS=( ${servers[*]} )
 
     if [[ "X${cmd}X" = "XsetupX" ]]; then
@@ -129,15 +125,9 @@ determine_servers()
         if [ -s /etc/ctdb/public_addresses ]; then
             readarray -t addrs < /etc/ctdb/public_addresses
         fi
-        local num_addrs=0
-        local index=0
-        while [ "x${addrs[${index}]}x" != "xx" ]; do
-            index=$(( ${index} + 2 ))
-            num_addrs=$(( ${num_addrs} + 1 ))
-        done
 
-        if [[ "${num_servers}" != "${num_addrs}" ]]; then
-            storlog "ERR" "num_servers != num_addrs in /etc/ctdb/nodes and /etc/ctdb/public_addresses"
+        if [[ "${#servers[*]}" != "${#addrs[*]}" ]]; then
+            storlog "ERR" "size of servers != size of addrs in /etc/ctdb/nodes and /etc/ctdb/public_addresses"
             return 1
         fi
 
