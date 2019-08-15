@@ -143,7 +143,7 @@ setup_move_ganesha_config()
     mount -t glusterfs ${HA_SERVERS[0]}:gluster_shared_storage ${mnt}
     ensure_dir ${mnt}/nfs-ganesha/exports
     cp /etc/ganesha/ganesha.conf ${mnt}/nfs-ganesha/
-    eval exports=( $(ls -1 /etc/ganesha/exports) )
+    declare -a exports=( $(ls -1 /etc/ganesha/exports) )
     if [[ ! -z ${exports[0]} ]]; then
         cp /etc/ganesha/exports/* ${mnt}/nfs-ganesha/exports/
     fi
@@ -192,7 +192,7 @@ teardown_restore_ganesha_config()
         ssh_do ${srv} "rm /etc/ganesha/ganesha.conf"
     done
     cp /run/gluster/shared_storage/nfs-ganesha/ganesha.conf /etc/ganesha/
-    eval exports=( $(ls -1 /run/gluster/shared_storage/nfs-ganesha/exports) )
+    declare -a exports=( $(ls -1 /run/gluster/shared_storage/nfs-ganesha/exports) )
     if [[ ! -z ${exports[0]} ]]; then
         cp /run/gluster/shared_storage/nfs-ganesha/exports/* /etc/ganesha/exports/
     fi
@@ -283,7 +283,7 @@ EOF
 
 unexport_vol()
 {
-    eval unexport_id=( $(awk '/Export_Id/' /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf | cut -d= -f2 | tr -d ' ;') )
+    declare -a unexport_id=( $(awk '/Export_Id/' /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf | cut -d= -f2 | tr -d ' ;') )
     for srv in ${HA_SERVERS[*]}; do
         ssh_do ${srv} "dbus-send --print-reply --system --dest=org.ganesha.nfsd /org/ganesha/nfsd/ExportMgr org.ganesha.nfsd.exportmgr.RemoveExport uint16:${unexport_id}"
     done
