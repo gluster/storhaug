@@ -101,7 +101,7 @@ determine_servers()
 
     local num_servers=0
     if [ -s /etc/ctdb/nodes ]; then
-        eval servers=( $(< /etc/ctdb/nodes) )
+        readarray -t servers < /etc/ctdb/nodes
     fi
     while [ "x${servers[${num_servers}]}x" != "xx" ]; do
         num_servers=$(( ${num_servers} + 1 ))
@@ -113,7 +113,7 @@ determine_servers()
     if [[ "X${cmd}X" = "XsetupX" ]]; then
 
         if [ -s /etc/ctdb/public_addresses ]; then
-            eval addrs=( $(< /etc/ctdb/public_addresses) )
+            readarray -t addrs < /etc/ctdb/public_addresses
         fi
         local num_addrs=0
         local index=0
