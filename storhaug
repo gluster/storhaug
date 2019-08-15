@@ -9,27 +9,34 @@
 #   See the file LICENSE or http://www.gnu.org/licenses/gpl-2.0.en.html#SEC1
 #
 
-. /etc/ctdb/ctdbd.conf
+# shellcheck disable=SC2162
 
-HA_NUM_SERVERS=0
+set -euo pipefail
+
 declare -a HA_SERVERS
 
 SECRET_PEM="/etc/sysconfig/storhaug.d/secret.pem"
 
-MY_IPS=( $(hostname -I || hostname -i) )
+read -a MY_IPS <<< "$(hostname -I || hostname -i)"
+CTDB_MY_IP="$(hostname -i)"
+
+declare -i MANAGE_FIREWALL=0
+
+. /etc/ctdb/ctdbd.conf
 
 ### Utility functions
 
 usage()
 {
-    echo "Usage       : setup|teardown|add|delete|reload|export|unexport"
-    echo "Setup       : storhaug setup"
-    echo "Teardown    : storhaug teardown"
-    echo "Add node    : storhaug add <IP> <VIP>"
-    echo "Delete node : storhaug delete <IP> <VIP>"
-    echo "Reload      : storhaug reload"
-    echo "Export      : storhaug export <VOL>"
-    echo "Unexport    : storhaug unexport <VOL>"
+    echo "Usage        : setup|teardown|add|delete|reload|export|unexport"
+    echo "Setup        : storhaug setup"
+    echo "Teardown     : storhaug teardown"
+    echo "Add node     : storhaug add <IP> <VIP>"
+    echo "Delete node  : storhaug delete <IP> <VIP>"
+    echo "Reload       : storhaug reload"
+    echo "Export       : storhaug export <VOL> [PATH]"
+    echo "List exports : storhaug list-exports"
+    echo "Unexport     : storhaug unexport <VOL>"
 }
 
 storlog()
@@ -37,30 +44,37 @@ storlog()
     LEVEL=${1}; shift
     case ${LEVEL} in
         ERR|ERROR)
-        echo "ERROR: $1" >&2
-        logger --tag="storhaug" -p "daemon.err" "${1}"
-        exit 1
-        ;;
+            echo "ERROR: $1" >&2
+            logger --tag="storhaug" -p "daemon.err" "${1}"
+            exit 1
+            ;;
         WARN|WARNING)
-        echo "WARNING: $1"
-        logger --tag="storhaug" -p "daemon.warn" "${1}"
-        ;;
+            echo "WARNING: $1"
+            logger --tag="storhaug" -p "daemon.warn" "${1}"
+            ;;
         INFO)
-        echo "$1"
-        logger --tag="storhaug" -p "daemon.info" "${1}"
-        ;;
+            echo "$1"
+            logger --tag="storhaug" -p "daemon.info" "${1}"
+            ;;
         DEBUG)
-        logger --tag="storhaug" -p "daemon.debug" "${1}"
-        ;;
+            logger --tag="storhaug" -p "daemon.debug" "${1}"
+            ;;
     esac
 }
 
 ssh_do()
 {
-    if [[ ${1} = ${MY_IPS[0]} ]]; then
-        eval ${2}
+    ip=$1
+    shift
+    if [[ ${ip} = "${CTDB_MY_IP}" ]]; then
+        eval "${*}"
     else
-        ssh -q -oPasswordAuthentication=no -oStrictHostKeyChecking=no -i ${SECRET_PEM} root@${1} "${2}"
+        ssh -q                          \
+            -oPasswordAuthentication=no \
+            -oStrictHostKeyChecking=no  \
+            -i ${SECRET_PEM}            \
+            root@"${ip}"                \
+            "${*}"
     fi
 
     local _ret=$?
@@ -91,8 +105,6 @@ ensure_dir()
     fi
 }
 
-# Check that a file exists, touch it otherwise.
-
 ### General cluster functions
 
 determine_servers()
@@ -101,31 +113,20 @@ determine_servers()
     declare -a servers
     declare -a addrs
 
-    local num_servers=0
     if [ -s /etc/ctdb/nodes ]; then
-        eval servers=( $(< /etc/ctdb/nodes) )
+        readarray -t servers < /etc/ctdb/nodes
     fi
-    while [ "x${servers[${num_servers}]}x" != "xx" ]; do
-        num_servers=$(( ${num_servers} + 1 ))
-    done
 
-    HA_NUM_SERVERS=${num_servers}
     HA_SERVERS=( ${servers[*]} )
 
     if [[ "X${cmd}X" = "XsetupX" ]]; then
 
         if [ -s /etc/ctdb/public_addresses ]; then
-            eval addrs=( $(< /etc/ctdb/public_addresses) )
+            readarray -t addrs < /etc/ctdb/public_addresses
         fi
-        local num_addrs=0
-        local index=0
-        while [ "x${addrs[${index}]}x" != "xx" ]; do
-            index=$(( ${index} + 2 )) 
-            num_addrs=$(( ${num_addrs} + 1 ))
-        done
 
-        if [[ "${num_servers}" != "${num_addrs}" ]]; then
-            storlog "ERR" "num_servers != num_addrs in /etc/ctdb/nodes and /etc/ctdb/public_addresses"
+        if [[ "${#HA_SERVERS[*]}" != "${#addrs[*]}" ]]; then
+            storlog "ERR" "size of servers != size of addrs in /etc/ctdb/nodes and /etc/ctdb/public_addresses"
             return 1
         fi
 
@@ -142,31 +143,33 @@ setup_move_ganesha_config()
 
     local mnt=$(mktemp -d /run/gluster/storhaug.XXXXXXXX)
 
-    mount -t glusterfs ${HA_SERVERS[0]}:gluster_shared_storage ${mnt}
-    ensure_dir ${mnt}/nfs-ganesha/exports
-    cp /etc/ganesha/ganesha.conf ${mnt}/nfs-ganesha/
-    eval exports=( $(ls -1 /etc/ganesha/exports) )
-    if [[ ! -z ${exports[0]} ]]; then
-        cp /etc/ganesha/exports/* ${mnt}/nfs-ganesha/exports/
+    mount -t glusterfs "${HA_SERVERS[0]}:gluster_shared_storage" "${mnt}"
+    ensure_dir "${mnt}/nfs-ganesha/exports"
+    cp /etc/ganesha/ganesha.conf "${mnt}/nfs-ganesha/"
+    declare -a exports=( $(readlink /etc/ganesha/exports) )
+    if [[ ${#exports[*]} -gt 0 ]]; then
+        cp /etc/ganesha/exports/* "${mnt}/nfs-ganesha/exports/"
     fi
     mv /etc/ganesha/ganesha.conf /etc/ganesha/ganesha.conf.orig
-    umount ${mnt}
-    rmdir ${mnt}
+    umount "${mnt}"
+    rmdir "${mnt}"
 
     for srv in ${HA_SERVERS[*]}; do
-        ssh_do ${srv} "ln -s /run/gluster/shared_storage/nfs-ganesha/ganesha.conf /etc/ganesha/ganesha.conf"
+        ssh_do "${srv}" "ln -sf /run/gluster/shared_storage/nfs-ganesha/ganesha.conf /etc/ganesha/ganesha.conf"
     done
 }
 
 setup_copy_ctdb_config()
 {
     for srv in ${HA_SERVERS[*]}; do
-        if [[ ${srv} != ${MY_IPS[0]} ]]; then
+        if [[ ${srv} != "${CTDB_MY_IP}" ]]; then
             scp_do /etc/ctdb/ctdbd.conf "${srv}:/etc/ctdb/"
             scp_do /etc/ctdb/nodes "${srv}:/etc/ctdb/"
             scp_do /etc/ctdb/public_addresses "${srv}:/etc/ctdb/"
-            ssh_do ${srv} firewall-cmd --add-service=ctdb --permanent
-            ssh_do ${srv} firewall-cmd --reload
+            if [[ ${MANAGE_FIREWALL} -ne 0 ]]; then
+                ssh_do "${srv}" firewall-cmd --add-service=ctdb --permanent
+                ssh_do "${srv}" firewall-cmd --reload
+            fi
         fi
     done
 }
@@ -194,10 +197,10 @@ teardown_restore_ganesha_config()
         ssh_do ${srv} "rm /etc/ganesha/ganesha.conf"
     done
     cp /run/gluster/shared_storage/nfs-ganesha/ganesha.conf /etc/ganesha/
-    eval exports=( $(ls -1 /run/gluster/shared_storage/nfs-ganesha/exports) )
+    declare -a exports=( $(ls -1 /run/gluster/shared_storage/nfs-ganesha/exports) )
     if [[ ! -z ${exports[0]} ]]; then
         cp /run/gluster/shared_storage/nfs-ganesha/exports/* /etc/ganesha/exports/
-    fi 
+    fi
 }
 
 ### take_ip, release_ip functions
@@ -238,25 +241,30 @@ release_ip()
 
 export_vol()
 {
+    local volume="${1}"
+    local path="${2:-${volume}}"
     local exp_id="0"
     local vol_started=""
+    local vol_conf="/run/gluster/shared_storage/nfs-ganesha/exports/export.${volume}.conf"
 
-    vol_started=$(gluster volume status ${1} 2>&1)
-    if [ "${vol_started}" = "Volume ${1} is not started" ]; then
-        echo "${1} is not started"
+    set +o errexit
+    vol_started=$(gluster volume status "${volume}" 2>&1)
+    set -o errexit
+    if [ "${vol_started}" = "Volume ${volume} is not started" ]; then
+        echo "${volume} is not started"
         return
     fi
 
-    if [ -f "/run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf" ]; then
-        echo "${1} already exported"
+    if [ -f "${vol_conf}" ]; then
+        echo "${volume} already exported"
         return
     fi
 
-    cat << EOF > /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf
+    cat << EOF > "${vol_conf}"
 EXPORT {
   Export_Id = __EXPORT_ID__;
-  Path = "/${1}";
-  Pseudo = "/${1}";
+  Path = "/${path}";
+  Pseudo = "/${path}";
   Access_Type = RW;
   Squash = No_root_squash;
   Disable_ACL = true;
@@ -266,26 +274,31 @@ EXPORT {
   FSAL {
     Name = "GLUSTER";
     Hostname = localhost;
-    Volume = "${1}";
+    Volume = "${volume}";
   }
 }
 EOF
 
-    exp_id=$(ls -1 /run/gluster/shared_storage/nfs-ganesha/exports/export.*.conf | wc -l)
+    exp_id=$(find /run/gluster/shared_storage/nfs-ganesha/exports -name 'export.*.conf' | wc -l)
 
-    sed -i -e s/__EXPORT_ID__/${exp_id}/ /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf
+    sed -i -e "s/__EXPORT_ID__/${exp_id}/" "${vol_conf}"
 
-    echo "%include \"/run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf\"" >> \
-        /run/gluster/shared_storage/nfs-ganesha/ganesha.conf
+    echo "%include \"${vol_conf}\"" >> \
+         /run/gluster/shared_storage/nfs-ganesha/ganesha.conf
 
     for srv in ${HA_SERVERS[*]}; do
-        ssh_do ${srv} "dbus-send --print-reply --system --dest=org.ganesha.nfsd /org/ganesha/nfsd/ExportMgr org.ganesha.nfsd.exportmgr.AddExport string:/run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf string:EXPORT\(Path=/${1}\)"
+        ssh_do "${srv}" "dbus-send --print-reply --system --dest=org.ganesha.nfsd /org/ganesha/nfsd/ExportMgr org.ganesha.nfsd.exportmgr.AddExport string:${vol_conf} string:EXPORT\\(Path=/${path}\\)"
     done
+}
+
+list_exports()
+{
+    find /run/gluster/shared_storage/nfs-ganesha/exports -name 'export.*.conf'
 }
 
 unexport_vol()
 {
-    eval unexport_id=( $(awk '/Export_Id/' /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf | cut -d= -f2 | tr -d ' ;') )
+    declare -a unexport_id=( $(awk '/Export_Id/' /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf | cut -d= -f2 | tr -d ' ;') )
     for srv in ${HA_SERVERS[*]}; do
         ssh_do ${srv} "dbus-send --print-reply --system --dest=org.ganesha.nfsd /org/ganesha/nfsd/ExportMgr org.ganesha.nfsd.exportmgr.RemoveExport uint16:${unexport_id}"
     done
@@ -295,13 +308,14 @@ unexport_vol()
 
 ### Mainline
 
-cmd=${1}; shift
+cmd=${1:--h}
 if [[ ${cmd} == *help || ${cmd} == "-h" ]]; then
     usage
     exit 0
 elif [[ ${cmd} == *status ]]; then
     exit 0
 fi
+shift
 
 case "${cmd}" in
     setup | --setup)
@@ -311,7 +325,7 @@ case "${cmd}" in
             storlog "INFO" "nfs-ganesha is already running"
         else
             determine_servers "setup"
-            if [ ${HA_NUM_SERVERS} -gt 1 ]; then
+            if [ ${#HA_SERVERS[*]} -gt 1 ]; then
                 setup_move_ganesha_config
                 setup_copy_ctdb_config
                 setup_start_ctdb
@@ -331,27 +345,27 @@ case "${cmd}" in
         storlog "INFO" "takeip"
 
         determine_servers "teardown"
-        take_ip ${1}
+        take_ip "${1}"
         ;;
     releaseip | --releaseip)
         storlog "INFO" "releaseip"
 
         determine_servers "teardown"
-        release_ip ${1}
+        release_ip "${1}"
         ;;
     reload | --reload)
         storlog "INFO" "Not implemented: ${cmd}"
         ;;
     export | --export)
-        if [[ ${1} == "" ]]; then
+        if [[ ${#*} -lt 1 ]]; then
             storlog "WARN" "missing volume name"
             usage
             exit 0
         fi
-        storlog "INFO" "export ${1}"
+        storlog "INFO" "export ${*}"
 
         determine_servers "teardown"
-        export_vol ${1}      
+        eval export_vol "${*}"
         ;;
     unexport | --unexport)
         if [[ ${1} == "" ]]; then
@@ -362,7 +376,11 @@ case "${cmd}" in
         storlog "INFO" "unexport ${1}"
 
         determine_servers "unexport"
-        unexport_vol ${1}
+        unexport_vol "${1}"
+        ;;
+    list-exports)
+        list_exports
+        exit 0
         ;;
     add | --add | delete | --delete | remove | --remove)
         storlog "ERR" "Not implemented: ${cmd}"
@@ -371,4 +389,3 @@ case "${cmd}" in
         usage
         ;;
 esac
-
