@@ -37,21 +37,21 @@ storlog()
     LEVEL=${1}; shift
     case ${LEVEL} in
         ERR|ERROR)
-        echo "ERROR: $1" >&2
-        logger --tag="storhaug" -p "daemon.err" "${1}"
-        exit 1
-        ;;
+            echo "ERROR: $1" >&2
+            logger --tag="storhaug" -p "daemon.err" "${1}"
+            exit 1
+            ;;
         WARN|WARNING)
-        echo "WARNING: $1"
-        logger --tag="storhaug" -p "daemon.warn" "${1}"
-        ;;
+            echo "WARNING: $1"
+            logger --tag="storhaug" -p "daemon.warn" "${1}"
+            ;;
         INFO)
-        echo "$1"
-        logger --tag="storhaug" -p "daemon.info" "${1}"
-        ;;
+            echo "$1"
+            logger --tag="storhaug" -p "daemon.info" "${1}"
+            ;;
         DEBUG)
-        logger --tag="storhaug" -p "daemon.debug" "${1}"
-        ;;
+            logger --tag="storhaug" -p "daemon.debug" "${1}"
+            ;;
     esac
 }
 
@@ -276,7 +276,7 @@ EOF
     sed -i -e s/__EXPORT_ID__/${exp_id}/ /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf
 
     echo "%include \"/run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf\"" >> \
-        /run/gluster/shared_storage/nfs-ganesha/ganesha.conf
+         /run/gluster/shared_storage/nfs-ganesha/ganesha.conf
 
     for srv in ${HA_SERVERS[*]}; do
         ssh_do ${srv} "dbus-send --print-reply --system --dest=org.ganesha.nfsd /org/ganesha/nfsd/ExportMgr org.ganesha.nfsd.exportmgr.AddExport string:/run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf string:EXPORT\(Path=/${1}\)"
