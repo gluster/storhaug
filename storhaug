@@ -297,13 +297,14 @@ unexport_vol()
 
 ### Mainline
 
-cmd=${1}; shift
+cmd=${1:--h}
 if [[ ${cmd} == *help || ${cmd} == "-h" ]]; then
     usage
     exit 0
 elif [[ ${cmd} == *status ]]; then
     exit 0
 fi
+shift
 
 case "${cmd}" in
     setup | --setup)
@@ -345,7 +346,7 @@ case "${cmd}" in
         storlog "INFO" "Not implemented: ${cmd}"
         ;;
     export | --export)
-        if [[ ${1} == "" ]]; then
+        if [[ ${#*} -lt 1 ]]; then
             storlog "WARN" "missing volume name"
             usage
             exit 0
