@@ -147,9 +147,9 @@ setup_move_ganesha_config()
     mount -t glusterfs ${HA_SERVERS[0]}:gluster_shared_storage ${mnt}
     ensure_dir ${mnt}/nfs-ganesha/exports
     cp /etc/ganesha/ganesha.conf ${mnt}/nfs-ganesha/
-    declare -a exports=( $(ls -1 /etc/ganesha/exports) )
     if [[ ! -z ${exports[0]} ]]; then
         cp /etc/ganesha/exports/* ${mnt}/nfs-ganesha/exports/
+    declare -a exports=( $(readlink /etc/ganesha/exports) )
     fi
     mv /etc/ganesha/ganesha.conf /etc/ganesha/ganesha.conf.orig
     umount "${mnt}"
