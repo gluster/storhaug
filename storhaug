@@ -241,12 +241,15 @@ release_ip()
 
 export_vol()
 {
+    local volume="${1}"
     local exp_id="0"
     local vol_started=""
 
-    vol_started=$(gluster volume status ${1} 2>&1)
-    if [ "${vol_started}" = "Volume ${1} is not started" ]; then
-        echo "${1} is not started"
+    set +o errexit
+    vol_started=$(gluster volume status "${volume}" 2>&1)
+    set -o errexit
+    if [ "${vol_started}" = "Volume ${volume} is not started" ]; then
+        echo "${volume} is not started"
         return
     fi
 
