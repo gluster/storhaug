@@ -334,13 +334,13 @@ case "${cmd}" in
         storlog "INFO" "takeip"
 
         determine_servers "teardown"
-        take_ip ${1}
+        take_ip "${1}"
         ;;
     releaseip | --releaseip)
         storlog "INFO" "releaseip"
 
         determine_servers "teardown"
-        release_ip ${1}
+        release_ip "${1}"
         ;;
     reload | --reload)
         storlog "INFO" "Not implemented: ${cmd}"
@@ -354,7 +354,7 @@ case "${cmd}" in
         storlog "INFO" "export ${1}"
 
         determine_servers "teardown"
-        export_vol ${1}
+        export_vol "${1}"
         ;;
     unexport | --unexport)
         if [[ ${1} == "" ]]; then
@@ -365,7 +365,7 @@ case "${cmd}" in
         storlog "INFO" "unexport ${1}"
 
         determine_servers "unexport"
-        unexport_vol ${1}
+        unexport_vol "${1}"
         ;;
     add | --add | delete | --delete | remove | --remove)
         storlog "ERR" "Not implemented: ${cmd}"
