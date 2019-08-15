@@ -21,6 +21,8 @@ SECRET_PEM="/etc/sysconfig/storhaug.d/secret.pem"
 read -a MY_IPS <<< "$(hostname -I || hostname -i)"
 CTDB_MY_IP="$(hostname -i)"
 
+declare -i MANAGE_FIREWALL=0
+
 . /etc/ctdb/ctdbd.conf
 
 ### Utility functions
@@ -175,8 +177,10 @@ setup_copy_ctdb_config()
             scp_do /etc/ctdb/ctdbd.conf "${srv}:/etc/ctdb/"
             scp_do /etc/ctdb/nodes "${srv}:/etc/ctdb/"
             scp_do /etc/ctdb/public_addresses "${srv}:/etc/ctdb/"
-            ssh_do ${srv} firewall-cmd --add-service=ctdb --permanent
-            ssh_do ${srv} firewall-cmd --reload
+            if [[ ${MANAGE_FIREWALL} -ne 0 ]]; then
+                ssh_do "${srv}" firewall-cmd --add-service=ctdb --permanent
+                ssh_do "${srv}" firewall-cmd --reload
+            fi
         fi
     done
 }
