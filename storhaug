@@ -152,11 +152,11 @@ setup_move_ganesha_config()
         cp /etc/ganesha/exports/* ${mnt}/nfs-ganesha/exports/
     fi
     mv /etc/ganesha/ganesha.conf /etc/ganesha/ganesha.conf.orig
-    umount ${mnt}
-    rmdir ${mnt}
+    umount "${mnt}"
+    rmdir "${mnt}"
 
     for srv in ${HA_SERVERS[*]}; do
-        ssh_do ${srv} "ln -s /run/gluster/shared_storage/nfs-ganesha/ganesha.conf /etc/ganesha/ganesha.conf"
+        ssh_do "${srv}" "ln -sf /run/gluster/shared_storage/nfs-ganesha/ganesha.conf /etc/ganesha/ganesha.conf"
     done
 }
 
