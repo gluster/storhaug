@@ -9,6 +9,8 @@
 #   See the file LICENSE or http://www.gnu.org/licenses/gpl-2.0.en.html#SEC1
 #
 
+# shellcheck disable=SC2162
+
 . /etc/ctdb/ctdbd.conf
 
 HA_NUM_SERVERS=0
@@ -16,7 +18,7 @@ declare -a HA_SERVERS
 
 SECRET_PEM="/etc/sysconfig/storhaug.d/secret.pem"
 
-MY_IPS=( $(hostname -I || hostname -i) )
+read -a MY_IPS <<< "$(hostname -I || hostname -i)"
 
 ### Utility functions
 
