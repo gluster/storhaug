@@ -28,14 +28,15 @@ declare -i MANAGE_FIREWALL=0
 
 usage()
 {
-    echo "Usage       : setup|teardown|add|delete|reload|export|unexport"
-    echo "Setup       : storhaug setup"
-    echo "Teardown    : storhaug teardown"
-    echo "Add node    : storhaug add <IP> <VIP>"
-    echo "Delete node : storhaug delete <IP> <VIP>"
-    echo "Reload      : storhaug reload"
-    echo "Export      : storhaug export <VOL>"
-    echo "Unexport    : storhaug unexport <VOL>"
+    echo "Usage        : setup|teardown|add|delete|reload|export|unexport"
+    echo "Setup        : storhaug setup"
+    echo "Teardown     : storhaug teardown"
+    echo "Add node     : storhaug add <IP> <VIP>"
+    echo "Delete node  : storhaug delete <IP> <VIP>"
+    echo "Reload       : storhaug reload"
+    echo "Export       : storhaug export <VOL>"
+    echo "List exports : storhaug list-exports"
+    echo "Unexport     : storhaug unexport <VOL>"
 }
 
 storlog()
@@ -285,6 +286,11 @@ EOF
     done
 }
 
+list_exports()
+{
+    find /run/gluster/shared_storage/nfs-ganesha/exports -name 'export.*.conf'
+}
+
 unexport_vol()
 {
     declare -a unexport_id=( $(awk '/Export_Id/' /run/gluster/shared_storage/nfs-ganesha/exports/export.${1}.conf | cut -d= -f2 | tr -d ' ;') )
@@ -366,6 +372,10 @@ case "${cmd}" in
 
         determine_servers "unexport"
         unexport_vol "${1}"
+        ;;
+    list-exports)
+        list_exports
+        exit 0
         ;;
     add | --add | delete | --delete | remove | --remove)
         storlog "ERR" "Not implemented: ${cmd}"
