@@ -15,6 +15,10 @@ HA_NUM_SERVERS=0
 declare -a HA_SERVERS
 
 SECRET_PEM="/etc/sysconfig/storhaug.d/secret.pem"
+eval DISTRO=( $(lsb_release -i | cut -f 2) )
+if [[ $DISTRO == "Debian" || $DISTRO == "Ubuntu" ]]; then
+	SECRET_PEM="/etc/default/storhaug.d/secret.pem"
+fi
 
 MY_IPS=( $(hostname -I || hostname -i) )
 
