@@ -140,7 +140,6 @@ service_start ()
 # Usage: check_ln <TARGET> <LINK>
 check_ln ()
 {
-	logger "check_ln ${1} ${2}"
 	if [ ! -L "${2}" ] ; then
 		rm -vrf "${2}"
 	else
