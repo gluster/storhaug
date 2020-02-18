@@ -9,7 +9,9 @@
 #   See the file LICENSE or http://www.gnu.org/licenses/gpl-2.0.en.html#SEC1
 #
 
+if [ -e /etc/ctdb/ctdbd.conf ]; then
 . /etc/ctdb/ctdbd.conf
+fi
 
 HA_NUM_SERVERS=0
 declare -a HA_SERVERS
