@@ -36,7 +36,8 @@ mkdir -p %{buildroot}%{_sysconfdir}/sysconfig/storhaug.d
 install -m 0744 storhaug %{buildroot}%{_sbindir}/storhaug
 install -m 0744 20.nfs-ganesha.check %{buildroot}%{_sysconfdir}/ctdb/nfs-checks-ganesha.d/
 install -m 0744 nfs-ganesha-callout %{buildroot}%{_sysconfdir}/ctdb
-gzip -c storhaug.8 %{_mandir}/man8/storhaug.8.gz
+mkdir -p %{buildroot}/%{_mandir}/man8
+gzip -c storhaug.8 > %{buildroot}/%{_mandir}/man8/storhaug.8.gz
 
 %clean
 
